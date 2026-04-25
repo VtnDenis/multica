@@ -1136,6 +1136,8 @@ func (d *Daemon) runTask(ctx context.Context, task Task, provider string, taskLo
 		"MULTICA_AGENT_NAME":   agentName,
 		"MULTICA_AGENT_ID":     task.AgentID,
 		"MULTICA_TASK_ID":      task.ID,
+		"TERMINAL_DOCKER_MOUNT_CWD_TO_WORKSPACE": "true",
+		"TERMINAL_CWD":         env.WorkDir,
 	}
 	if d.cfg.ExecutionContainer != "" {
 		agentEnv["MULTICA_EXECUTION_CONTAINER"] = d.cfg.ExecutionContainer
