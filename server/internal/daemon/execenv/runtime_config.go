@@ -324,7 +324,7 @@ func buildMetaSkillContent(provider string, ctx TaskContextForEnv) string {
 		b.WriteString("When referencing an issue in a comment, use the issue mention format `[MUL-123](mention://issue/<issue-id>)` so it renders as a clickable link. (Issue mentions have no side effect; only member/agent mentions do — see the Mentions section above.)\n")
 	} else {
 		b.WriteString("Your final assistant output is captured automatically as the task result. Keep it concise and outcome-focused.\n")
-		b.WriteString("If CLI access is available and you intentionally perform issue-management actions, ensure they are explicit and justified.\n")
+		b.WriteString("This is a hermetic no-CLI run: do not perform issue-management actions via `multica` commands.\n")
 	}
 
 	return b.String()

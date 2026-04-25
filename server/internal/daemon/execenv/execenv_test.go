@@ -548,6 +548,7 @@ func TestInjectRuntimeConfigCodingOnlyMode(t *testing.T) {
 		}
 	}
 	for _, absent := range []string{
+		"multica issue get",
 		"multica issue get <id>",
 		"multica issue status <id>",
 		"multica attachment download",
@@ -633,6 +634,9 @@ func TestWriteContextFilesCodingOnlyIncludesIssueSnapshot(t *testing.T) {
 			t.Errorf("issue_context.md missing %q\n---\n%s", want, s)
 		}
 	}
+	if strings.Contains(s, "multica issue get") {
+		t.Errorf("issue_context.md should not mention multica issue get in coding-only mode\n---\n%s", s)
+	}
 }
 
 func TestInjectRuntimeConfigCodingOnlyIncludesIssueSnapshot(t *testing.T) {
@@ -668,6 +672,9 @@ func TestInjectRuntimeConfigCodingOnlyIncludesIssueSnapshot(t *testing.T) {
 		if !strings.Contains(s, want) {
 			t.Errorf("CLAUDE.md missing %q\n---\n%s", want, s)
 		}
+	}
+	if strings.Contains(s, "multica issue get") {
+		t.Errorf("CLAUDE.md should not mention multica issue get in coding-only mode\n---\n%s", s)
 	}
 }
 

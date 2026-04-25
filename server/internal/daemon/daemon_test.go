@@ -113,6 +113,9 @@ func TestBuildPromptWithOptions_CodingOnlyMode(t *testing.T) {
 	if strings.Contains(prompt, "Start by running `multica issue get") {
 		t.Fatalf("coding-only prompt should not enforce CLI first step:\n%s", prompt)
 	}
+	if strings.Contains(prompt, "multica issue get") {
+		t.Fatalf("coding-only prompt should not mention multica issue get at all:\n%s", prompt)
+	}
 }
 
 func TestBuildPromptWithOptions_CodingOnlyModeIncludesIssueSnapshot(t *testing.T) {
@@ -149,6 +152,9 @@ func TestBuildPromptWithOptions_CommentCodingOnlyMode(t *testing.T) {
 	}
 	if strings.Contains(prompt, "multica issue comment add issue-1 --parent comment-1") {
 		t.Fatalf("coding-only comment prompt should not enforce multica comment command:\n%s", prompt)
+	}
+	if strings.Contains(prompt, "multica issue get") {
+		t.Fatalf("coding-only comment prompt should not mention multica issue get at all:\n%s", prompt)
 	}
 }
 
