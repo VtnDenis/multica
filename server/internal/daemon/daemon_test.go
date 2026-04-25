@@ -187,6 +187,37 @@ func TestBuildPromptAutopilotRunOnly(t *testing.T) {
 	}
 }
 
+func TestBuildPromptWithOptionsAutopilotRunOnlyNoCLI(t *testing.T) {
+	t.Parallel()
+
+	prompt := BuildPromptWithOptions(Task{
+		AutopilotRunID:       "run-1",
+		AutopilotID:          "autopilot-1",
+		AutopilotTitle:       "Daily dependency check",
+		AutopilotDescription: "Check dependencies and report outdated packages.",
+		AutopilotSource:      "manual",
+	}, false)
+
+	for _, want := range []string{
+		"run-only mode",
+		"Autopilot run ID: run-1",
+		"Do NOT run `multica` commands in this runtime.",
+	} {
+		if !strings.Contains(prompt, want) {
+			t.Fatalf("autopilot no-CLI prompt missing %q\n---\n%s", want, prompt)
+		}
+	}
+
+	for _, absent := range []string{
+		"multica issue get",
+		"multica autopilot get",
+	} {
+		if strings.Contains(prompt, absent) {
+			t.Fatalf("autopilot no-CLI prompt should not contain %q\n---\n%s", absent, prompt)
+		}
+	}
+}
+
 func TestBuildPromptCommentTriggered(t *testing.T) {
 	t.Parallel()
 

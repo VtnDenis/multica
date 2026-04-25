@@ -306,6 +306,49 @@ func TestWriteContextFilesAutopilotRunOnly(t *testing.T) {
 	}
 }
 
+func TestWriteContextFilesAutopilotRunOnlyNoCLI(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+
+	requireCLI := false
+	ctx := TaskContextForEnv{
+		AutopilotRunID:       "run-1",
+		AutopilotID:          "autopilot-1",
+		AutopilotTitle:       "Daily dependency check",
+		AutopilotDescription: "Check dependencies and report outdated packages.",
+		AutopilotSource:      "manual",
+		RequireMulticaCLI:    &requireCLI,
+	}
+
+	if err := writeContextFiles(dir, "", ctx); err != nil {
+		t.Fatalf("writeContextFiles failed: %v", err)
+	}
+
+	content, err := os.ReadFile(filepath.Join(dir, ".agent_context", "issue_context.md"))
+	if err != nil {
+		t.Fatalf("failed to read: %v", err)
+	}
+
+	s := string(content)
+	for _, want := range []string{
+		"# Autopilot Run",
+		"run-1",
+		"Do NOT run `multica` commands in this runtime",
+	} {
+		if !strings.Contains(s, want) {
+			t.Errorf("autopilot no-CLI context missing %q\n---\n%s", want, s)
+		}
+	}
+	for _, absent := range []string{
+		"multica issue get",
+		"multica autopilot get",
+	} {
+		if strings.Contains(s, absent) {
+			t.Errorf("autopilot no-CLI context should not contain %q\n---\n%s", absent, s)
+		}
+	}
+}
+
 func TestWriteContextFilesClaudeNativeSkills(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
