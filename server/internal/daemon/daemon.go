@@ -854,7 +854,14 @@ func (d *Daemon) pollLoop(ctx context.Context) error {
 				if taskTarget == "" && task.ChatSessionID != "" {
 					taskTarget = "chat:" + shortID(task.ChatSessionID)
 				}
-				d.logger.Info("task received", "task", shortID(task.ID), "target", taskTarget)
+				d.logger.Info("task received",
+					"task", shortID(task.ID),
+					"target", taskTarget,
+					"issue_title", task.IssueTitle,
+					"issue_description_len", len(task.IssueDescription),
+					"workspace_id", task.WorkspaceID,
+					"has_trigger_comment", task.TriggerCommentContent != "",
+				)
 				wg.Add(1)
 				d.activeTasks.Add(1)
 				go func(t Task) {

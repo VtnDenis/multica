@@ -749,12 +749,24 @@ func (h *Handler) ClaimTaskByRuntime(w http.ResponseWriter, r *http.Request) {
 			if issue.Description.Valid {
 				resp.IssueDescription = issue.Description.String
 			}
+			slog.Info("claim: GetIssue succeeded",
+				"task_id", uuidToString(task.ID),
+				"issue_id", uuidToString(task.IssueID),
+				"issue_title", issue.Title,
+				"has_description", issue.Description.Valid,
+			)
 			if ws, err := h.Queries.GetWorkspace(r.Context(), issue.WorkspaceID); err == nil && ws.Repos != nil {
 				var repos []RepoData
 				if json.Unmarshal(ws.Repos, &repos) == nil && len(repos) > 0 {
 					resp.Repos = repos
 				}
 			}
+		} else {
+			slog.Error("claim: GetIssue FAILED",
+				"task_id", uuidToString(task.ID),
+				"issue_id", uuidToString(task.IssueID),
+				"error", err,
+			)
 		}
 
 		// Fetch the triggering comment content so the daemon can embed it
@@ -900,7 +912,16 @@ func (h *Handler) ClaimTaskByRuntime(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	slog.Info("task claimed by runtime", "task_id", uuidToString(task.ID), "runtime_id", runtimeID, "agent_id", uuidToString(task.AgentID), "prior_session", resp.PriorSessionID)
+	slog.Info("task claimed by runtime",
+		"task_id", uuidToString(task.ID),
+		"runtime_id", runtimeID,
+		"agent_id", uuidToString(task.AgentID),
+		"prior_session", resp.PriorSessionID,
+		"issue_title", resp.IssueTitle,
+		"has_issue_description", resp.IssueDescription != "",
+		"workspace_id", resp.WorkspaceID,
+		"has_trigger_comment", resp.TriggerCommentContent != "",
+	)
 	writeJSON(w, http.StatusOK, map[string]any{"task": resp})
 }
 

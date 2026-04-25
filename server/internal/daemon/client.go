@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"runtime"
 	"strings"
@@ -110,6 +111,16 @@ func (c *Client) ClaimTask(ctx context.Context, runtimeID string) (*Task, error)
 	}
 	if err := c.postJSON(ctx, fmt.Sprintf("/api/daemon/runtimes/%s/tasks/claim", runtimeID), map[string]any{}, &resp); err != nil {
 		return nil, err
+	}
+	if resp.Task != nil {
+		slog.Debug("claim response details",
+			"runtime_id", runtimeID,
+			"task_id", resp.Task.ID,
+			"issue_id", resp.Task.IssueID,
+			"issue_title", resp.Task.IssueTitle,
+			"issue_description_len", len(resp.Task.IssueDescription),
+			"workspace_id", resp.Task.WorkspaceID,
+		)
 	}
 	return resp.Task, nil
 }
