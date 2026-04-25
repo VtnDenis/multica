@@ -70,39 +70,40 @@ func buildMetaSkillContent(provider string, ctx TaskContextForEnv) string {
 		b.WriteString("\n\n")
 	}
 
-	b.WriteString("## Available Commands\n\n")
 	if requireMulticaCLI {
+		b.WriteString("## Available Commands\n\n")
 		b.WriteString("**Always use `--output json` for all read commands** to get structured data with full IDs.\n\n")
-	} else {
-		b.WriteString("If `multica` CLI is available in this runtime, prefer `--output json` for read commands. If it is not available, continue without CLI access.\n\n")
-	}
-	b.WriteString("### Read\n")
-	b.WriteString("- `multica issue get <id> --output json` — Get full issue details (title, description, status, priority, assignee)\n")
-	b.WriteString("- `multica issue list [--status X] [--priority X] [--assignee X] [--limit N] [--offset N] --output json` — List issues in workspace (default limit: 50; JSON output includes `total`, `has_more` — use offset to paginate when `has_more` is true)\n")
-	b.WriteString("- `multica issue comment list <issue-id> [--limit N] [--offset N] [--since <RFC3339>] --output json` — List comments on an issue (supports pagination; includes id, parent_id for threading)\n")
-	b.WriteString("- `multica workspace get --output json` — Get workspace details and context\n")
-	b.WriteString("- `multica workspace members [workspace-id] --output json` — List workspace members (user IDs, names, roles)\n")
-	b.WriteString("- `multica agent list --output json` — List agents in workspace\n")
-	b.WriteString("- `multica repo checkout <url>` — Check out a repository into the working directory (creates a git worktree with a dedicated branch)\n")
-	b.WriteString("- `multica issue runs <issue-id> --output json` — List all execution runs for an issue (status, timestamps, errors)\n")
-	b.WriteString("- `multica issue run-messages <task-id> [--since <seq>] --output json` — List messages for a specific execution run (supports incremental fetch)\n")
-	b.WriteString("- `multica attachment download <id> [-o <dir>]` — Download an attachment file locally by ID\n")
-	b.WriteString("- `multica autopilot list [--status X] --output json` — List autopilots (scheduled/triggered agent automations) in the workspace\n")
-	b.WriteString("- `multica autopilot get <id> --output json` — Get autopilot details including triggers\n")
-	b.WriteString("- `multica autopilot runs <id> [--limit N] --output json` — List execution history for an autopilot\n\n")
+		b.WriteString("### Read\n")
+		b.WriteString("- `multica issue get <id> --output json` — Get full issue details (title, description, status, priority, assignee)\n")
+		b.WriteString("- `multica issue list [--status X] [--priority X] [--assignee X] [--limit N] [--offset N] --output json` — List issues in workspace (default limit: 50; JSON output includes `total`, `has_more` — use offset to paginate when `has_more` is true)\n")
+		b.WriteString("- `multica issue comment list <issue-id> [--limit N] [--offset N] [--since <RFC3339>] --output json` — List comments on an issue (supports pagination; includes id, parent_id for threading)\n")
+		b.WriteString("- `multica workspace get --output json` — Get workspace details and context\n")
+		b.WriteString("- `multica workspace members [workspace-id] --output json` — List workspace members (user IDs, names, roles)\n")
+		b.WriteString("- `multica agent list --output json` — List agents in workspace\n")
+		b.WriteString("- `multica repo checkout <url>` — Check out a repository into the working directory (creates a git worktree with a dedicated branch)\n")
+		b.WriteString("- `multica issue runs <issue-id> --output json` — List all execution runs for an issue (status, timestamps, errors)\n")
+		b.WriteString("- `multica issue run-messages <task-id> [--since <seq>] --output json` — List messages for a specific execution run (supports incremental fetch)\n")
+		b.WriteString("- `multica attachment download <id> [-o <dir>]` — Download an attachment file locally by ID\n")
+		b.WriteString("- `multica autopilot list [--status X] --output json` — List autopilots (scheduled/triggered agent automations) in the workspace\n")
+		b.WriteString("- `multica autopilot get <id> --output json` — Get autopilot details including triggers\n")
+		b.WriteString("- `multica autopilot runs <id> [--limit N] --output json` — List execution history for an autopilot\n\n")
 
-	b.WriteString("### Write\n")
-	b.WriteString("- `multica issue create --title \"...\" [--description \"...\"] [--priority X] [--assignee X] [--parent <issue-id>] [--status X]` — Create a new issue\n")
-	b.WriteString("- `multica issue assign <id> --to <name>` — Assign an issue to a member or agent by name (use --unassign to remove assignee)\n")
-	b.WriteString("- `multica issue comment add <issue-id> --content \"...\" [--parent <comment-id>]` — Post a comment (use --parent to reply to a specific comment)\n")
-	b.WriteString("  - For content with special characters (backticks, quotes), pipe via stdin: `cat <<'COMMENT' | multica issue comment add <issue-id> --content-stdin`\n")
-	b.WriteString("- `multica issue comment delete <comment-id>` — Delete a comment\n")
-	b.WriteString("- `multica issue status <id> <status>` — Update issue status (todo, in_progress, in_review, done, blocked)\n")
-	b.WriteString("- `multica issue update <id> [--title X] [--description X] [--priority X]` — Update issue fields\n")
-	b.WriteString("- `multica autopilot create --title \"...\" --agent <name> --mode create_issue [--description \"...\"]` — Create an autopilot\n")
-	b.WriteString("- `multica autopilot update <id> [--title X] [--description X] [--status active|paused]` — Update an autopilot\n")
-	b.WriteString("- `multica autopilot trigger <id>` — Manually trigger an autopilot to run once\n")
-	b.WriteString("- `multica autopilot delete <id>` — Delete an autopilot\n\n")
+		b.WriteString("### Write\n")
+		b.WriteString("- `multica issue create --title \"...\" [--description \"...\"] [--priority X] [--assignee X] [--parent <issue-id>] [--status X]` — Create a new issue\n")
+		b.WriteString("- `multica issue assign <id> --to <name>` — Assign an issue to a member or agent by name (use --unassign to remove assignee)\n")
+		b.WriteString("- `multica issue comment add <issue-id> --content \"...\" [--parent <comment-id>]` — Post a comment (use --parent to reply to a specific comment)\n")
+		b.WriteString("  - For content with special characters (backticks, quotes), pipe via stdin: `cat <<'COMMENT' | multica issue comment add <issue-id> --content-stdin`\n")
+		b.WriteString("- `multica issue comment delete <comment-id>` — Delete a comment\n")
+		b.WriteString("- `multica issue status <id> <status>` — Update issue status (todo, in_progress, in_review, done, blocked)\n")
+		b.WriteString("- `multica issue update <id> [--title X] [--description X] [--priority X]` — Update issue fields\n")
+		b.WriteString("- `multica autopilot create --title \"...\" --agent <name> --mode create_issue [--description \"...\"]` — Create an autopilot\n")
+		b.WriteString("- `multica autopilot update <id> [--title X] [--description X] [--status active|paused]` — Update an autopilot\n")
+		b.WriteString("- `multica autopilot trigger <id>` — Manually trigger an autopilot to run once\n")
+		b.WriteString("- `multica autopilot delete <id>` — Delete an autopilot\n\n")
+	} else {
+		b.WriteString("## Platform Access\n\n")
+		b.WriteString("`multica` CLI access is disabled for this runtime. Do NOT run `multica` commands.\n\n")
+	}
 
 	// Inject available repositories section.
 	if len(ctx.Repos) > 0 {
@@ -111,7 +112,7 @@ func buildMetaSkillContent(provider string, ctx TaskContextForEnv) string {
 		if requireMulticaCLI {
 			b.WriteString("Use `multica repo checkout <url>` to check out a repository into your working directory.\n\n")
 		} else {
-			b.WriteString("If the `multica` CLI is available, you can run `multica repo checkout <url>`. Otherwise, work with the repository content already present in the working directory.\n\n")
+			b.WriteString("Work with the repository content already present in the working directory.\n\n")
 		}
 		b.WriteString("| URL | Description |\n")
 		b.WriteString("|-----|-------------|\n")
@@ -150,7 +151,7 @@ func buildMetaSkillContent(provider string, ctx TaskContextForEnv) string {
 			b.WriteString("- If asked to perform actions (create issues, update status, etc.), use the appropriate CLI commands\n")
 			b.WriteString("- If the task requires code changes, use `multica repo checkout <url>` to get the code first\n")
 		} else {
-			b.WriteString("- Do not assume the `multica` CLI is available in this runtime\n")
+			b.WriteString("- Do NOT run `multica` commands in this runtime\n")
 			b.WriteString("- Use the message context and repository files already available in the working directory\n")
 		}
 		b.WriteString("- Keep responses concise and direct\n\n")
@@ -183,7 +184,7 @@ func buildMetaSkillContent(provider string, ctx TaskContextForEnv) string {
 		if requireMulticaCLI {
 			b.WriteString("- Do not run `multica issue get`, `multica issue comment add`, or `multica issue status` for this run unless the autopilot instructions explicitly tell you to create or update an issue\n\n")
 		} else {
-			b.WriteString("- Do not assume the `multica` CLI is available for this run\n\n")
+			b.WriteString("- Do NOT run `multica` commands for this run\n\n")
 		}
 	} else if ctx.TriggerCommentID != "" {
 		// Comment-triggered: focus on reading and replying
@@ -202,7 +203,7 @@ func buildMetaSkillContent(provider string, ctx TaskContextForEnv) string {
 			fmt.Fprintf(&b, "1. Use the provided context to find and address the triggering comment (ID: `%s`)\n", ctx.TriggerCommentID)
 			b.WriteString("2. **Decide whether a reply is warranted.** If the triggering comment is an acknowledgment / thanks / sign-off from another agent and no concrete question or task is being asked of you, do NOT post a reply — just exit. Silence is a valid and preferred way to end agent-to-agent conversations.\n")
 			b.WriteString("3. If a reply IS warranted: do any requested work first, then decide whether to include any `@mention` link. The default is NO mention.\n")
-			b.WriteString("4. Do not assume the `multica` CLI is available. Your final assistant output is captured as the task result.\n")
+			b.WriteString("4. Do NOT run `multica` commands in this runtime. Your final assistant output is captured as the task result.\n")
 			b.WriteString("5. Do NOT change issue status from this runtime unless explicitly asked and the required tools are available\n\n")
 		}
 	} else {
@@ -219,7 +220,7 @@ func buildMetaSkillContent(provider string, ctx TaskContextForEnv) string {
 		} else {
 			b.WriteString("Follow your Skills and Agent Identity to complete the task directly (write code, investigate, etc.).\n\n")
 			b.WriteString("1. Use the task context already provided in this run\n")
-			b.WriteString("2. Do not assume `multica` CLI commands are available in this runtime\n")
+			b.WriteString("2. Do NOT run `multica` commands in this runtime\n")
 			b.WriteString("3. Provide a concise final result in your assistant output when done\n")
 			b.WriteString("4. If blocked, clearly state what is missing (tooling, permissions, context)\n\n")
 		}
@@ -264,15 +265,17 @@ func buildMetaSkillContent(provider string, ctx TaskContextForEnv) string {
 	if requireMulticaCLI {
 		b.WriteString("Use `multica issue list --output json` to look up issue IDs, and `multica workspace members --output json` for member IDs.\n\n")
 	} else {
-		b.WriteString("If `multica` CLI is available, you may use issue/member lookup commands for mention IDs; otherwise avoid side-effecting mentions.\n\n")
+		b.WriteString("Avoid side-effecting mentions in this runtime unless explicit IDs are already provided in task context.\n\n")
 	}
 
-	b.WriteString("## Attachments\n\n")
-	b.WriteString("Issues and comments may include file attachments (images, documents, etc.).\n")
-	b.WriteString("Use the download command to fetch attachment files locally:\n\n")
-	b.WriteString("```\nmultica attachment download <attachment-id>\n```\n\n")
-	b.WriteString("This downloads the file to the current directory and prints the local path. Use `-o <dir>` to save elsewhere.\n")
-	b.WriteString("After downloading, you can read the file directly (e.g. view an image, read a document).\n\n")
+	if requireMulticaCLI {
+		b.WriteString("## Attachments\n\n")
+		b.WriteString("Issues and comments may include file attachments (images, documents, etc.).\n")
+		b.WriteString("Use the download command to fetch attachment files locally:\n\n")
+		b.WriteString("```\nmultica attachment download <attachment-id>\n```\n\n")
+		b.WriteString("This downloads the file to the current directory and prints the local path. Use `-o <dir>` to save elsewhere.\n")
+		b.WriteString("After downloading, you can read the file directly (e.g. view an image, read a document).\n\n")
+	}
 
 	if requireMulticaCLI {
 		b.WriteString("## Important: Always Use the `multica` CLI\n\n")

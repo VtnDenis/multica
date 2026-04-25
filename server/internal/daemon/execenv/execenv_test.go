@@ -539,12 +539,21 @@ func TestInjectRuntimeConfigCodingOnlyMode(t *testing.T) {
 
 	s := string(content)
 	for _, want := range []string{
-		"Do not assume the `multica` CLI is available",
+		"Do NOT run `multica` commands",
 		"Runtime Constraints",
 		"final assistant output is captured automatically",
 	} {
 		if !strings.Contains(s, want) {
 			t.Errorf("CLAUDE.md missing %q\n---\n%s", want, s)
+		}
+	}
+	for _, absent := range []string{
+		"multica issue get <id>",
+		"multica issue status <id>",
+		"multica attachment download",
+	} {
+		if strings.Contains(s, absent) {
+			t.Errorf("CLAUDE.md should not expose CLI command catalog in coding-only mode: found %q\n---\n%s", absent, s)
 		}
 	}
 	for _, absent := range []string{

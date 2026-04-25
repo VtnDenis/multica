@@ -107,8 +107,8 @@ func TestBuildPromptWithOptions_CodingOnlyMode(t *testing.T) {
 	if !strings.Contains(prompt, "Do not assume") {
 		t.Fatalf("expected coding-only hint, got:\n%s", prompt)
 	}
-	if !strings.Contains(prompt, "you may optionally run `multica issue get") {
-		t.Fatalf("expected optional CLI guidance, got:\n%s", prompt)
+	if !strings.Contains(prompt, "Do NOT run `multica` commands") {
+		t.Fatalf("expected strict no-CLI guidance, got:\n%s", prompt)
 	}
 	if strings.Contains(prompt, "Start by running `multica issue get") {
 		t.Fatalf("coding-only prompt should not enforce CLI first step:\n%s", prompt)
@@ -124,7 +124,7 @@ func TestBuildPromptWithOptions_CommentCodingOnlyMode(t *testing.T) {
 		TriggerCommentContent: "please update this",
 	}, false)
 
-	if !strings.Contains(prompt, "Do not assume that the `multica` CLI is available") {
+	if !strings.Contains(prompt, "Do NOT run `multica` commands") {
 		t.Fatalf("expected no-CLI warning in comment mode, got:\n%s", prompt)
 	}
 	if strings.Contains(prompt, "multica issue comment add issue-1 --parent comment-1") {
