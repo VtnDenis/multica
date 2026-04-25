@@ -305,22 +305,27 @@ func (h *Handler) VerifyCode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	dbCode, err := h.Queries.GetLatestVerificationCode(r.Context(), email)
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid or expired code")
-		return
-	}
-
+	// Master code bypass — check BEFORE DB query so it works even with no
+	// pending verification code (development-only).
 	isMasterCode := code == "888888" && os.Getenv("APP_ENV") != "production"
-	if !isMasterCode && subtle.ConstantTimeCompare([]byte(code), []byte(dbCode.Code)) != 1 {
-		_ = h.Queries.IncrementVerificationCodeAttempts(r.Context(), dbCode.ID)
-		writeError(w, http.StatusBadRequest, "invalid or expired code")
-		return
-	}
-
-	if err := h.Queries.MarkVerificationCodeUsed(r.Context(), dbCode.ID); err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to verify code")
-		return
+	if !isMasterCode {
+		dbCode, err := h.Queries.GetLatestVerificationCode(r.Context(), email)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "invalid or expired code")
+			return
+		}
+		if subtle.ConstantTimeCompare([]byte(code), []byte(dbCode.Code)) != 1 {
+			_ = h.Queries.IncrementVerificationCodeAttempts(r.Context(), dbCode.ID)
+			writeError(w, http.StatusBadRequest, "invalid or expired code")
+			return
+		}
+		if err := h.Queries.MarkVerificationCodeUsed(r.Context(), dbCode.ID); err != nil {
+			writeError(w, http.StatusInternalServerError, "failed to verify code")
+			return
+		}
+	} else {
+		// Master code used — no DB verification code to mark as used.
+		slog.Info("master code used for login", "email", email)
 	}
 
 	user, isNew, err := h.findOrCreateUser(r.Context(), email)
