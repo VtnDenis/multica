@@ -1097,6 +1097,32 @@ func (d *Daemon) runTask(ctx context.Context, task Task, provider string, taskLo
 	// the same (agent, issue) pair. The work_dir path is stored in DB on
 	// task completion and passed back via PriorWorkDir on the next claim.
 
+	// When the Multica CLI is disabled (Hermes/Kimi agents), the agent cannot
+	// run `multica repo checkout` to populate the workdir. Pre-populate repos
+	// via the daemon's repocache so the agent sees the code immediately.
+	if !requireMulticaCLI && len(task.Repos) > 0 {
+		for _, repo := range task.Repos {
+			if repo.URL == "" {
+				continue
+			}
+			_, err := d.repoCache.CreateWorktree(repocache.WorktreeParams{
+				WorkspaceID: task.WorkspaceID,
+				RepoURL:     repo.URL,
+				WorkDir:     env.WorkDir,
+				AgentName:   agentName,
+				TaskID:      task.ID,
+			})
+			if err != nil {
+				taskLog.Warn("pre-populate repo: worktree creation failed",
+					"url", repo.URL,
+					"error", err,
+				)
+			} else {
+				taskLog.Info("pre-populated repo", "url", repo.URL)
+			}
+		}
+	}
+
 	prompt := BuildPromptWithOptions(task, d.cfg.RequireMulticaCLI)
 
 	// Pass the daemon's auth credentials and context so the spawned agent CLI
