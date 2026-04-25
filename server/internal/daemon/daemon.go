@@ -1036,14 +1036,18 @@ func (d *Daemon) runTask(ctx context.Context, task Task, provider string, taskLo
 	// Prepare isolated execution environment.
 	// Repos are passed as metadata only — the agent checks them out on demand
 	// via `multica repo checkout <url>`.
+	requireMulticaCLI := d.cfg.RequireMulticaCLI
 	taskCtx := execenv.TaskContextForEnv{
 		IssueID:                 task.IssueID,
 		TriggerCommentID:        task.TriggerCommentID,
+		RequireMulticaCLI:       &requireMulticaCLI,
 		AgentID:                 agentID,
 		AgentName:               agentName,
 		AgentInstructions:       instructions,
 		AgentSkills:             convertSkillsForEnv(skills),
 		Repos:                   convertReposForEnv(task.Repos),
+		ExecutionContainerName:  d.cfg.ExecutionContainer,
+		ExecutionProxyPort:      d.cfg.ExecutionProxyPort,
 		ChatSessionID:           task.ChatSessionID,
 		AutopilotRunID:          task.AutopilotRunID,
 		AutopilotID:             task.AutopilotID,
@@ -1083,7 +1087,7 @@ func (d *Daemon) runTask(ctx context.Context, task Task, provider string, taskLo
 	// the same (agent, issue) pair. The work_dir path is stored in DB on
 	// task completion and passed back via PriorWorkDir on the next claim.
 
-	prompt := BuildPrompt(task)
+	prompt := BuildPromptWithOptions(task, d.cfg.RequireMulticaCLI)
 
 	// Pass the daemon's auth credentials and context so the spawned agent CLI
 	// can call the Multica API and the local daemon (e.g. `multica repo checkout`).
@@ -1092,9 +1096,16 @@ func (d *Daemon) runTask(ctx context.Context, task Task, provider string, taskLo
 		"MULTICA_SERVER_URL":   d.cfg.ServerBaseURL,
 		"MULTICA_DAEMON_PORT":  fmt.Sprintf("%d", d.cfg.HealthPort),
 		"MULTICA_WORKSPACE_ID": task.WorkspaceID,
+		"MULTICA_REQUIRE_MULTICA_CLI": fmt.Sprintf("%t", d.cfg.RequireMulticaCLI),
 		"MULTICA_AGENT_NAME":   agentName,
 		"MULTICA_AGENT_ID":     task.AgentID,
 		"MULTICA_TASK_ID":      task.ID,
+	}
+	if d.cfg.ExecutionContainer != "" {
+		agentEnv["MULTICA_EXECUTION_CONTAINER"] = d.cfg.ExecutionContainer
+	}
+	if d.cfg.ExecutionProxyPort != "" {
+		agentEnv["MULTICA_EXECUTION_PROXY_PORT"] = d.cfg.ExecutionProxyPort
 	}
 	if task.AutopilotRunID != "" {
 		agentEnv["MULTICA_AUTOPILOT_RUN_ID"] = task.AutopilotRunID
@@ -1106,9 +1117,11 @@ func (d *Daemon) runTask(ctx context.Context, task Task, provider string, taskLo
 	// Some runtimes (e.g. Codex) run in an isolated sandbox that may not
 	// inherit the daemon's PATH. Prepend the directory of the running
 	// multica binary so that `multica` commands in the agent always resolve.
-	if selfBin, err := os.Executable(); err == nil {
-		binDir := filepath.Dir(selfBin)
-		agentEnv["PATH"] = binDir + string(os.PathListSeparator) + os.Getenv("PATH")
+	if d.cfg.RequireMulticaCLI {
+		if selfBin, err := os.Executable(); err == nil {
+			binDir := filepath.Dir(selfBin)
+			agentEnv["PATH"] = binDir + string(os.PathListSeparator) + os.Getenv("PATH")
+		}
 	}
 	// Point Codex to the per-task CODEX_HOME so it discovers skills natively
 	// without polluting the system ~/.codex/skills/.

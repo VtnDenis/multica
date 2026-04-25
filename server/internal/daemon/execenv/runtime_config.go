@@ -40,9 +40,14 @@ func InjectRuntimeConfig(workDir, provider string, ctx TaskContextForEnv) error 
 // about the Multica runtime environment and available CLI tools.
 func buildMetaSkillContent(provider string, ctx TaskContextForEnv) string {
 	var b strings.Builder
+	requireMulticaCLI := ctx.RequiresMulticaCLI()
 
 	b.WriteString("# Multica Agent Runtime\n\n")
-	b.WriteString("You are a coding agent in the Multica platform. Use the `multica` CLI to interact with the platform.\n\n")
+	if requireMulticaCLI {
+		b.WriteString("You are a coding agent in the Multica platform. Use the `multica` CLI to interact with the platform.\n\n")
+	} else {
+		b.WriteString("You are a coding agent in the Multica platform running in a constrained sandbox. Do not assume the `multica` CLI is available. Complete coding tasks directly using the provided context and repository files.\n\n")
+	}
 
 	// Always emit agent identity so the agent knows who it is, even when
 	// dispatched via @mention on an issue assigned to a different agent.
@@ -66,7 +71,11 @@ func buildMetaSkillContent(provider string, ctx TaskContextForEnv) string {
 	}
 
 	b.WriteString("## Available Commands\n\n")
-	b.WriteString("**Always use `--output json` for all read commands** to get structured data with full IDs.\n\n")
+	if requireMulticaCLI {
+		b.WriteString("**Always use `--output json` for all read commands** to get structured data with full IDs.\n\n")
+	} else {
+		b.WriteString("If `multica` CLI is available in this runtime, prefer `--output json` for read commands. If it is not available, continue without CLI access.\n\n")
+	}
 	b.WriteString("### Read\n")
 	b.WriteString("- `multica issue get <id> --output json` — Get full issue details (title, description, status, priority, assignee)\n")
 	b.WriteString("- `multica issue list [--status X] [--priority X] [--assignee X] [--limit N] [--offset N] --output json` — List issues in workspace (default limit: 50; JSON output includes `total`, `has_more` — use offset to paginate when `has_more` is true)\n")
@@ -99,7 +108,11 @@ func buildMetaSkillContent(provider string, ctx TaskContextForEnv) string {
 	if len(ctx.Repos) > 0 {
 		b.WriteString("## Repositories\n\n")
 		b.WriteString("The following code repositories are available in this workspace.\n")
-		b.WriteString("Use `multica repo checkout <url>` to check out a repository into your working directory.\n\n")
+		if requireMulticaCLI {
+			b.WriteString("Use `multica repo checkout <url>` to check out a repository into your working directory.\n\n")
+		} else {
+			b.WriteString("If the `multica` CLI is available, you can run `multica repo checkout <url>`. Otherwise, work with the repository content already present in the working directory.\n\n")
+		}
 		b.WriteString("| URL | Description |\n")
 		b.WriteString("|-----|-------------|\n")
 		for _, repo := range ctx.Repos {
@@ -112,17 +125,34 @@ func buildMetaSkillContent(provider string, ctx TaskContextForEnv) string {
 		b.WriteString("\nThe checkout command creates a git worktree with a dedicated branch. You can check out one or more repos as needed.\n\n")
 	}
 
+	if ctx.ExecutionContainerName != "" || ctx.ExecutionProxyPort != "" {
+		b.WriteString("## Execution Environment\n\n")
+		if ctx.ExecutionContainerName != "" {
+			fmt.Fprintf(&b, "- Sandbox container: `%s`\n", ctx.ExecutionContainerName)
+		}
+		if ctx.ExecutionProxyPort != "" {
+			fmt.Fprintf(&b, "- Network restrictions may be enforced via proxy/firewall port `%s`\n", ctx.ExecutionProxyPort)
+		}
+		b.WriteString("- Do not assume direct access to the daemon host filesystem outside the task working directory\n")
+		b.WriteString("- Prefer operations that are valid in containerized execution environments\n\n")
+	}
+
 	b.WriteString("### Workflow\n\n")
 
 	if ctx.ChatSessionID != "" {
 		// Chat task: interactive assistant mode
 		b.WriteString("**You are in chat mode.** A user is messaging you directly in a chat window.\n\n")
 		b.WriteString("- Respond conversationally and helpfully to the user's message\n")
-		b.WriteString("- You have full access to the `multica` CLI to look up issues, workspace info, members, agents, etc.\n")
-		b.WriteString("- If asked about issues, use `multica issue list --output json` or `multica issue get <id> --output json`\n")
-		b.WriteString("- If asked about the workspace, use `multica workspace get --output json`\n")
-		b.WriteString("- If asked to perform actions (create issues, update status, etc.), use the appropriate CLI commands\n")
-		b.WriteString("- If the task requires code changes, use `multica repo checkout <url>` to get the code first\n")
+		if requireMulticaCLI {
+			b.WriteString("- You have full access to the `multica` CLI to look up issues, workspace info, members, agents, etc.\n")
+			b.WriteString("- If asked about issues, use `multica issue list --output json` or `multica issue get <id> --output json`\n")
+			b.WriteString("- If asked about the workspace, use `multica workspace get --output json`\n")
+			b.WriteString("- If asked to perform actions (create issues, update status, etc.), use the appropriate CLI commands\n")
+			b.WriteString("- If the task requires code changes, use `multica repo checkout <url>` to get the code first\n")
+		} else {
+			b.WriteString("- Do not assume the `multica` CLI is available in this runtime\n")
+			b.WriteString("- Use the message context and repository files already available in the working directory\n")
+		}
 		b.WriteString("- Keep responses concise and direct\n\n")
 	} else if ctx.AutopilotRunID != "" {
 		// Autopilot run_only task: no issue exists, so the agent must not
@@ -146,33 +176,53 @@ func buildMetaSkillContent(provider string, ctx TaskContextForEnv) string {
 			b.WriteString(ctx.AutopilotDescription)
 			b.WriteString("\n\n")
 		}
-		if ctx.AutopilotID != "" {
+		if ctx.AutopilotID != "" && requireMulticaCLI {
 			fmt.Fprintf(&b, "- Run `multica autopilot get %s --output json` if you need the full autopilot configuration\n", ctx.AutopilotID)
 		}
 		b.WriteString("- Complete the autopilot instructions directly\n")
-		b.WriteString("- Do not run `multica issue get`, `multica issue comment add`, or `multica issue status` for this run unless the autopilot instructions explicitly tell you to create or update an issue\n\n")
+		if requireMulticaCLI {
+			b.WriteString("- Do not run `multica issue get`, `multica issue comment add`, or `multica issue status` for this run unless the autopilot instructions explicitly tell you to create or update an issue\n\n")
+		} else {
+			b.WriteString("- Do not assume the `multica` CLI is available for this run\n\n")
+		}
 	} else if ctx.TriggerCommentID != "" {
 		// Comment-triggered: focus on reading and replying
 		b.WriteString("**This task was triggered by a NEW comment.** Your primary job is to respond to THIS specific comment, even if you have handled similar requests before in this session.\n\n")
-		fmt.Fprintf(&b, "1. Run `multica issue get %s --output json` to understand the issue context\n", ctx.IssueID)
-		fmt.Fprintf(&b, "2. Run `multica issue comment list %s --output json` to read the conversation\n", ctx.IssueID)
-		b.WriteString("   - If the output is very large or truncated, use pagination: `--limit 30` to get the latest 30 comments, or `--since <timestamp>` to fetch only recent ones\n")
-		fmt.Fprintf(&b, "3. Find the triggering comment (ID: `%s`) and understand what is being asked — do NOT confuse it with previous comments\n", ctx.TriggerCommentID)
-		b.WriteString("4. **Decide whether a reply is warranted.** If the triggering comment is an acknowledgment / thanks / sign-off from another agent and no concrete question or task is being asked of you, do NOT post a reply — just exit. Silence is a valid and preferred way to end agent-to-agent conversations.\n")
-		b.WriteString("5. If a reply IS warranted: do any requested work first, then **decide whether to include any `@mention` link.** The default is NO mention. Only mention when you are escalating to a human owner who is not yet involved, delegating a concrete new sub-task to another agent for the first time, or the user explicitly asked you to loop someone in. Never @mention the agent you are replying to as a thank-you or sign-off.\n")
-		b.WriteString("6. **If you reply, post it as a comment — this step is mandatory when you reply.** Text in your terminal or run logs is NOT delivered to the user. ")
-		b.WriteString(BuildCommentReplyInstructions(ctx.IssueID, ctx.TriggerCommentID))
-		b.WriteString("7. Do NOT change the issue status unless the comment explicitly asks for it\n\n")
+		if requireMulticaCLI {
+			fmt.Fprintf(&b, "1. Run `multica issue get %s --output json` to understand the issue context\n", ctx.IssueID)
+			fmt.Fprintf(&b, "2. Run `multica issue comment list %s --output json` to read the conversation\n", ctx.IssueID)
+			b.WriteString("   - If the output is very large or truncated, use pagination: `--limit 30` to get the latest 30 comments, or `--since <timestamp>` to fetch only recent ones\n")
+			fmt.Fprintf(&b, "3. Find the triggering comment (ID: `%s`) and understand what is being asked — do NOT confuse it with previous comments\n", ctx.TriggerCommentID)
+			b.WriteString("4. **Decide whether a reply is warranted.** If the triggering comment is an acknowledgment / thanks / sign-off from another agent and no concrete question or task is being asked of you, do NOT post a reply — just exit. Silence is a valid and preferred way to end agent-to-agent conversations.\n")
+			b.WriteString("5. If a reply IS warranted: do any requested work first, then **decide whether to include any `@mention` link.** The default is NO mention. Only mention when you are escalating to a human owner who is not yet involved, delegating a concrete new sub-task to another agent for the first time, or the user explicitly asked you to loop someone in. Never @mention the agent you are replying to as a thank-you or sign-off.\n")
+			b.WriteString("6. **If you reply, post it as a comment — this step is mandatory when you reply.** Text in your terminal or run logs is NOT delivered to the user. ")
+			b.WriteString(BuildCommentReplyInstructions(ctx.IssueID, ctx.TriggerCommentID))
+			b.WriteString("7. Do NOT change the issue status unless the comment explicitly asks for it\n\n")
+		} else {
+			fmt.Fprintf(&b, "1. Use the provided context to find and address the triggering comment (ID: `%s`)\n", ctx.TriggerCommentID)
+			b.WriteString("2. **Decide whether a reply is warranted.** If the triggering comment is an acknowledgment / thanks / sign-off from another agent and no concrete question or task is being asked of you, do NOT post a reply — just exit. Silence is a valid and preferred way to end agent-to-agent conversations.\n")
+			b.WriteString("3. If a reply IS warranted: do any requested work first, then decide whether to include any `@mention` link. The default is NO mention.\n")
+			b.WriteString("4. Do not assume the `multica` CLI is available. Your final assistant output is captured as the task result.\n")
+			b.WriteString("5. Do NOT change issue status from this runtime unless explicitly asked and the required tools are available\n\n")
+		}
 	} else {
 		// Assignment-triggered: defer to agent Skills for workflow specifics.
-		b.WriteString("You are responsible for managing the issue status throughout your work.\n\n")
-		fmt.Fprintf(&b, "1. Run `multica issue get %s --output json` to understand your task\n", ctx.IssueID)
-		fmt.Fprintf(&b, "2. Run `multica issue status %s in_progress`\n", ctx.IssueID)
-		b.WriteString("3. Read comments for additional context or human instructions\n")
-		b.WriteString("4. Follow your Skills and Agent Identity to complete the task (write code, investigate, etc.)\n")
-		fmt.Fprintf(&b, "5. **Post your final results as a comment — this step is mandatory**: `multica issue comment add %s --content \"...\"`. Your results are only visible to the user if posted via this CLI call; text in your terminal or run logs is NOT delivered.\n", ctx.IssueID)
-		fmt.Fprintf(&b, "6. When done, run `multica issue status %s in_review`\n", ctx.IssueID)
-		fmt.Fprintf(&b, "7. If blocked, run `multica issue status %s blocked` and post a comment explaining why\n\n", ctx.IssueID)
+		if requireMulticaCLI {
+			b.WriteString("You are responsible for managing the issue status throughout your work.\n\n")
+			fmt.Fprintf(&b, "1. Run `multica issue get %s --output json` to understand your task\n", ctx.IssueID)
+			fmt.Fprintf(&b, "2. Run `multica issue status %s in_progress`\n", ctx.IssueID)
+			b.WriteString("3. Read comments for additional context or human instructions\n")
+			b.WriteString("4. Follow your Skills and Agent Identity to complete the task (write code, investigate, etc.)\n")
+			fmt.Fprintf(&b, "5. **Post your final results as a comment — this step is mandatory**: `multica issue comment add %s --content \"...\"`. Your results are only visible to the user if posted via this CLI call; text in your terminal or run logs is NOT delivered.\n", ctx.IssueID)
+			fmt.Fprintf(&b, "6. When done, run `multica issue status %s in_review`\n", ctx.IssueID)
+			fmt.Fprintf(&b, "7. If blocked, run `multica issue status %s blocked` and post a comment explaining why\n\n", ctx.IssueID)
+		} else {
+			b.WriteString("Follow your Skills and Agent Identity to complete the task directly (write code, investigate, etc.).\n\n")
+			b.WriteString("1. Use the task context already provided in this run\n")
+			b.WriteString("2. Do not assume `multica` CLI commands are available in this runtime\n")
+			b.WriteString("3. Provide a concise final result in your assistant output when done\n")
+			b.WriteString("4. If blocked, clearly state what is missing (tooling, permissions, context)\n\n")
+		}
 	}
 
 	if len(ctx.AgentSkills) > 0 {
@@ -211,7 +261,11 @@ func buildMetaSkillContent(provider string, ctx TaskContextForEnv) string {
 	b.WriteString("- Delegating a concrete sub-task to another agent for the first time, with a clear request.\n")
 	b.WriteString("- The user explicitly asked you to loop someone in.\n\n")
 	b.WriteString("If you are unsure whether a mention is warranted, **don't mention**. Silence ends conversations; `@` restarts them.\n\n")
-	b.WriteString("Use `multica issue list --output json` to look up issue IDs, and `multica workspace members --output json` for member IDs.\n\n")
+	if requireMulticaCLI {
+		b.WriteString("Use `multica issue list --output json` to look up issue IDs, and `multica workspace members --output json` for member IDs.\n\n")
+	} else {
+		b.WriteString("If `multica` CLI is available, you may use issue/member lookup commands for mention IDs; otherwise avoid side-effecting mentions.\n\n")
+	}
 
 	b.WriteString("## Attachments\n\n")
 	b.WriteString("Issues and comments may include file attachments (images, documents, etc.).\n")
@@ -220,22 +274,32 @@ func buildMetaSkillContent(provider string, ctx TaskContextForEnv) string {
 	b.WriteString("This downloads the file to the current directory and prints the local path. Use `-o <dir>` to save elsewhere.\n")
 	b.WriteString("After downloading, you can read the file directly (e.g. view an image, read a document).\n\n")
 
-	b.WriteString("## Important: Always Use the `multica` CLI\n\n")
-	b.WriteString("All interactions with Multica platform resources — including issues, comments, attachments, images, files, and any other platform data — **must** go through the `multica` CLI. ")
-	b.WriteString("Do NOT use `curl`, `wget`, or any other HTTP client to access Multica URLs or APIs directly. ")
-	b.WriteString("Multica resource URLs require authenticated access that only the `multica` CLI can provide.\n\n")
-	b.WriteString("If you need to perform an operation that is not covered by any existing `multica` command, ")
-	b.WriteString("do NOT attempt to work around it. Instead, post a comment mentioning the workspace owner to request the missing functionality.\n\n")
+	if requireMulticaCLI {
+		b.WriteString("## Important: Always Use the `multica` CLI\n\n")
+		b.WriteString("All interactions with Multica platform resources — including issues, comments, attachments, images, files, and any other platform data — **must** go through the `multica` CLI. ")
+		b.WriteString("Do NOT use `curl`, `wget`, or any other HTTP client to access Multica URLs or APIs directly. ")
+		b.WriteString("Multica resource URLs require authenticated access that only the `multica` CLI can provide.\n\n")
+		b.WriteString("If you need to perform an operation that is not covered by any existing `multica` command, ")
+		b.WriteString("do NOT attempt to work around it. Instead, post a comment mentioning the workspace owner to request the missing functionality.\n\n")
+	} else {
+		b.WriteString("## Runtime Constraints\n\n")
+		b.WriteString("This runtime may not provide the `multica` CLI or direct access to Multica APIs. ")
+		b.WriteString("Complete coding tasks without assuming platform-management tools are present. ")
+		b.WriteString("Do not rely on direct HTTP calls to Multica internals from this sandbox.\n\n")
+	}
 
 	b.WriteString("## Output\n\n")
 	if ctx.AutopilotRunID != "" {
 		b.WriteString("This is a run-only autopilot task, so there may be no issue comment to post. Your final assistant output is captured automatically as the autopilot run result. Keep it concise and state the outcome.\n")
-	} else {
+	} else if requireMulticaCLI {
 		b.WriteString("⚠️ **Final results MUST be delivered via `multica issue comment add`.** The user does NOT see your terminal output, assistant chat text, or run logs — only comments on the issue. A task that finishes without a result comment is invisible to the user, even if the work itself was correct.\n\n")
 		b.WriteString("Keep comments concise and natural — state the outcome, not the process.\n")
 		b.WriteString("Good: \"Fixed the login redirect. PR: https://...\"\n")
 		b.WriteString("Bad: \"1. Read the issue 2. Found the bug in auth.go 3. Created branch 4. ...\"\n")
 		b.WriteString("When referencing an issue in a comment, use the issue mention format `[MUL-123](mention://issue/<issue-id>)` so it renders as a clickable link. (Issue mentions have no side effect; only member/agent mentions do — see the Mentions section above.)\n")
+	} else {
+		b.WriteString("Your final assistant output is captured automatically as the task result. Keep it concise and outcome-focused.\n")
+		b.WriteString("If CLI access is available and you intentionally perform issue-management actions, ensure they are explicit and justified.\n")
 	}
 
 	return b.String()

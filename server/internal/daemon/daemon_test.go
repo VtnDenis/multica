@@ -98,6 +98,40 @@ func TestBuildPromptNoIssueDetails(t *testing.T) {
 	}
 }
 
+func TestBuildPromptWithOptions_CodingOnlyMode(t *testing.T) {
+	t.Parallel()
+
+	issueID := "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+	prompt := BuildPromptWithOptions(Task{IssueID: issueID}, false)
+
+	if !strings.Contains(prompt, "Do not assume") {
+		t.Fatalf("expected coding-only hint, got:\n%s", prompt)
+	}
+	if !strings.Contains(prompt, "you may optionally run `multica issue get") {
+		t.Fatalf("expected optional CLI guidance, got:\n%s", prompt)
+	}
+	if strings.Contains(prompt, "Start by running `multica issue get") {
+		t.Fatalf("coding-only prompt should not enforce CLI first step:\n%s", prompt)
+	}
+}
+
+func TestBuildPromptWithOptions_CommentCodingOnlyMode(t *testing.T) {
+	t.Parallel()
+
+	prompt := BuildPromptWithOptions(Task{
+		IssueID:               "issue-1",
+		TriggerCommentID:      "comment-1",
+		TriggerCommentContent: "please update this",
+	}, false)
+
+	if !strings.Contains(prompt, "Do not assume that the `multica` CLI is available") {
+		t.Fatalf("expected no-CLI warning in comment mode, got:\n%s", prompt)
+	}
+	if strings.Contains(prompt, "multica issue comment add issue-1 --parent comment-1") {
+		t.Fatalf("coding-only comment prompt should not enforce multica comment command:\n%s", prompt)
+	}
+}
+
 func TestBuildPromptAutopilotRunOnly(t *testing.T) {
 	t.Parallel()
 

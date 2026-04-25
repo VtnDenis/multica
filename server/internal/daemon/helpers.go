@@ -67,6 +67,21 @@ func intFromEnv(key string, fallback int) (int, error) {
 	return n, nil
 }
 
+func boolFromEnv(key string, fallback bool) (bool, error) {
+	value := strings.TrimSpace(strings.ToLower(os.Getenv(key)))
+	if value == "" {
+		return fallback, nil
+	}
+	switch value {
+	case "1", "true", "yes", "on":
+		return true, nil
+	case "0", "false", "no", "off":
+		return false, nil
+	default:
+		return false, fmt.Errorf("%s: invalid boolean %q (expected true/false)", key, value)
+	}
+}
+
 func sleepWithContext(ctx context.Context, d time.Duration) error {
 	timer := time.NewTimer(d)
 	defer timer.Stop()

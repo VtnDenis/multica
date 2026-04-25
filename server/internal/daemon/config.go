@@ -27,6 +27,9 @@ const (
 // Config holds all daemon configuration.
 type Config struct {
 	ServerBaseURL      string
+	RequireMulticaCLI  bool
+	ExecutionContainer string
+	ExecutionProxyPort string
 	DaemonID           string
 	LegacyDaemonIDs    []string              // historical daemon_ids this machine may have registered under; reported at register time so the server can merge old runtime rows
 	DeviceName         string
@@ -152,6 +155,13 @@ func LoadConfig(overrides Overrides) (Config, error) {
 	if len(agents) == 0 {
 		return Config{}, fmt.Errorf("no agent CLI found: install claude, codex, copilot, opencode, openclaw, hermes, gemini, pi, cursor-agent, or kimi and ensure it is on PATH")
 	}
+
+	requireMulticaCLI, err := boolFromEnv("MULTICA_REQUIRE_MULTICA_CLI", true)
+	if err != nil {
+		return Config{}, err
+	}
+	executionContainer := strings.TrimSpace(os.Getenv("MULTICA_EXECUTION_CONTAINER"))
+	executionProxyPort := strings.TrimSpace(os.Getenv("MULTICA_EXECUTION_PROXY_PORT"))
 
 	// Host info
 	host, err := os.Hostname()
@@ -290,6 +300,9 @@ func LoadConfig(overrides Overrides) (Config, error) {
 
 	return Config{
 		ServerBaseURL:      serverBaseURL,
+		RequireMulticaCLI:  requireMulticaCLI,
+		ExecutionContainer: executionContainer,
+		ExecutionProxyPort: executionProxyPort,
 		DaemonID:           daemonID,
 		LegacyDaemonIDs:    legacyDaemonIDs,
 		DeviceName:         deviceName,

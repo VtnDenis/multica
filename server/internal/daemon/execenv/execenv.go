@@ -33,11 +33,14 @@ type PrepareParams struct {
 type TaskContextForEnv struct {
 	IssueID                 string
 	TriggerCommentID        string // comment that triggered this task (empty for on_assign)
+	RequireMulticaCLI       *bool  // nil => true (backward-compatible default)
 	AgentID                 string // unique ID of the dispatched agent
 	AgentName               string
 	AgentInstructions       string // agent identity/persona instructions, injected into CLAUDE.md
 	AgentSkills             []SkillContextForEnv
 	Repos                   []RepoContextForEnv // workspace repos available for checkout
+	ExecutionContainerName  string
+	ExecutionProxyPort      string
 	ChatSessionID           string              // non-empty for chat tasks
 	AutopilotRunID          string              // non-empty for autopilot run_only tasks
 	AutopilotID             string
@@ -45,6 +48,16 @@ type TaskContextForEnv struct {
 	AutopilotDescription    string
 	AutopilotSource         string
 	AutopilotTriggerPayload string
+}
+
+// RequiresMulticaCLI returns whether the runtime instructions should enforce
+// Multica CLI usage. A nil pointer is treated as true for backward
+// compatibility with existing call sites and tests.
+func (t TaskContextForEnv) RequiresMulticaCLI() bool {
+	if t.RequireMulticaCLI == nil {
+		return true
+	}
+	return *t.RequireMulticaCLI
 }
 
 // SkillContextForEnv represents a skill to be written into the execution environment.

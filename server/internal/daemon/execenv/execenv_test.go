@@ -518,6 +518,78 @@ func TestInjectRuntimeConfigNoSkills(t *testing.T) {
 	}
 }
 
+func TestInjectRuntimeConfigCodingOnlyMode(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+
+	requireCLI := false
+	ctx := TaskContextForEnv{
+		IssueID:           "test-issue-id",
+		RequireMulticaCLI: &requireCLI,
+	}
+
+	if err := InjectRuntimeConfig(dir, "claude", ctx); err != nil {
+		t.Fatalf("InjectRuntimeConfig failed: %v", err)
+	}
+
+	content, err := os.ReadFile(filepath.Join(dir, "CLAUDE.md"))
+	if err != nil {
+		t.Fatalf("failed to read CLAUDE.md: %v", err)
+	}
+
+	s := string(content)
+	for _, want := range []string{
+		"Do not assume the `multica` CLI is available",
+		"Runtime Constraints",
+		"final assistant output is captured automatically",
+	} {
+		if !strings.Contains(s, want) {
+			t.Errorf("CLAUDE.md missing %q\n---\n%s", want, s)
+		}
+	}
+	for _, absent := range []string{
+		"## Important: Always Use the `multica` CLI",
+		"Final results MUST be delivered via `multica issue comment add`",
+	} {
+		if strings.Contains(s, absent) {
+			t.Errorf("CLAUDE.md should not contain %q in coding-only mode\n---\n%s", absent, s)
+		}
+	}
+}
+
+func TestWriteContextFilesIncludesExecutionEnvironmentHints(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+
+	requireCLI := false
+	ctx := TaskContextForEnv{
+		IssueID:                "ctx-exec-env",
+		RequireMulticaCLI:      &requireCLI,
+		ExecutionContainerName: "openshell-my-assistant",
+		ExecutionProxyPort:     "8080",
+	}
+
+	if err := writeContextFiles(dir, "", ctx); err != nil {
+		t.Fatalf("writeContextFiles failed: %v", err)
+	}
+
+	content, err := os.ReadFile(filepath.Join(dir, ".agent_context", "issue_context.md"))
+	if err != nil {
+		t.Fatalf("failed to read issue_context.md: %v", err)
+	}
+	s := string(content)
+	for _, want := range []string{
+		"Execution Environment",
+		"openshell-my-assistant",
+		"proxy/firewall port `8080`",
+		"Do not assume direct access to the daemon host filesystem",
+	} {
+		if !strings.Contains(s, want) {
+			t.Errorf("issue_context.md missing %q\n---\n%s", want, s)
+		}
+	}
+}
+
 func TestWriteContextFilesCopilotNativeSkills(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()

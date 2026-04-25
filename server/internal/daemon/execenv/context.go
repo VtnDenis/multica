@@ -149,7 +149,23 @@ func renderIssueContext(provider string, ctx TaskContextForEnv) string {
 	}
 
 	b.WriteString("## Quick Start\n\n")
-	fmt.Fprintf(&b, "Run `multica issue get %s --output json` to fetch the full issue details.\n\n", ctx.IssueID)
+	if ctx.RequiresMulticaCLI() {
+		fmt.Fprintf(&b, "Run `multica issue get %s --output json` to fetch the full issue details.\n\n", ctx.IssueID)
+	} else {
+		b.WriteString("Start from the context already provided in this run and implement the requested changes directly.\n")
+		fmt.Fprintf(&b, "If `multica` CLI is available in your runtime, you may optionally run `multica issue get %s --output json` for extra issue metadata.\n\n", ctx.IssueID)
+	}
+
+	if ctx.ExecutionContainerName != "" || ctx.ExecutionProxyPort != "" {
+		b.WriteString("## Execution Environment\n\n")
+		if ctx.ExecutionContainerName != "" {
+			fmt.Fprintf(&b, "- Sandbox container: `%s`\n", ctx.ExecutionContainerName)
+		}
+		if ctx.ExecutionProxyPort != "" {
+			fmt.Fprintf(&b, "- Network restrictions may be enforced via proxy/firewall port `%s`\n", ctx.ExecutionProxyPort)
+		}
+		b.WriteString("- Do not assume direct access to the daemon host filesystem outside the task working directory\n\n")
+	}
 
 	if len(ctx.AgentSkills) > 0 {
 		b.WriteString("## Agent Skills\n\n")
@@ -182,9 +198,24 @@ func renderAutopilotContext(ctx TaskContextForEnv) string {
 	}
 
 	b.WriteString("## Quick Start\n\n")
-	b.WriteString("This is a run-only autopilot task with no assigned issue. Do not run `multica issue get` unless the autopilot instructions explicitly ask you to create or update an issue.\n\n")
-	if ctx.AutopilotID != "" {
+	if ctx.RequiresMulticaCLI() {
+		b.WriteString("This is a run-only autopilot task with no assigned issue. Do not run `multica issue get` unless the autopilot instructions explicitly ask you to create or update an issue.\n\n")
+	} else {
+		b.WriteString("This is a run-only autopilot task with no assigned issue. Complete the instructions directly; do not assume the `multica` CLI is available.\n\n")
+	}
+	if ctx.AutopilotID != "" && ctx.RequiresMulticaCLI() {
 		fmt.Fprintf(&b, "Run `multica autopilot get %s --output json` if you need the full autopilot configuration.\n\n", ctx.AutopilotID)
+	}
+
+	if ctx.ExecutionContainerName != "" || ctx.ExecutionProxyPort != "" {
+		b.WriteString("## Execution Environment\n\n")
+		if ctx.ExecutionContainerName != "" {
+			fmt.Fprintf(&b, "- Sandbox container: `%s`\n", ctx.ExecutionContainerName)
+		}
+		if ctx.ExecutionProxyPort != "" {
+			fmt.Fprintf(&b, "- Network restrictions may be enforced via proxy/firewall port `%s`\n", ctx.ExecutionProxyPort)
+		}
+		b.WriteString("- Do not assume direct access to the daemon host filesystem outside the task working directory\n\n")
 	}
 	if strings.TrimSpace(ctx.AutopilotDescription) != "" {
 		b.WriteString("## Autopilot Instructions\n\n")

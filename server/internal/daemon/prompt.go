@@ -11,19 +11,30 @@ import (
 // Keep this minimal — detailed instructions live in CLAUDE.md / AGENTS.md
 // injected by execenv.InjectRuntimeConfig.
 func BuildPrompt(task Task) string {
+	return BuildPromptWithOptions(task, true)
+}
+
+// BuildPromptWithOptions constructs the task prompt while allowing callers to
+// disable strict Multica CLI assumptions for sandboxed runtimes.
+func BuildPromptWithOptions(task Task, requireMulticaCLI bool) string {
 	if task.ChatSessionID != "" {
-		return buildChatPrompt(task)
+		return buildChatPrompt(task, requireMulticaCLI)
 	}
 	if task.TriggerCommentID != "" {
-		return buildCommentPrompt(task)
+		return buildCommentPrompt(task, requireMulticaCLI)
 	}
 	if task.AutopilotRunID != "" {
-		return buildAutopilotPrompt(task)
+		return buildAutopilotPrompt(task, requireMulticaCLI)
 	}
 	var b strings.Builder
 	b.WriteString("You are running as a local coding agent for a Multica workspace.\n\n")
 	fmt.Fprintf(&b, "Your assigned issue ID is: %s\n\n", task.IssueID)
-	fmt.Fprintf(&b, "Start by running `multica issue get %s --output json` to understand your task, then complete it.\n", task.IssueID)
+	if requireMulticaCLI {
+		fmt.Fprintf(&b, "Start by running `multica issue get %s --output json` to understand your task, then complete it.\n", task.IssueID)
+	} else {
+		b.WriteString("Start from the task context already provided in this run and complete the implementation directly. ")
+		fmt.Fprintf(&b, "If the `multica` CLI is available, you may optionally run `multica issue get %s --output json` for extra context.\n", task.IssueID)
+	}
 	return b.String()
 }
 
@@ -33,7 +44,7 @@ func BuildPrompt(task Task) string {
 // The reply instructions (including the current TriggerCommentID as --parent)
 // are re-emitted on every turn so resumed sessions cannot carry forward a
 // previous turn's --parent UUID.
-func buildCommentPrompt(task Task) string {
+func buildCommentPrompt(task Task, requireMulticaCLI bool) string {
 	var b strings.Builder
 	b.WriteString("You are running as a local coding agent for a Multica workspace.\n\n")
 	fmt.Fprintf(&b, "Your assigned issue ID is: %s\n\n", task.IssueID)
@@ -52,22 +63,31 @@ func buildCommentPrompt(task Task) string {
 			b.WriteString("⚠️ The triggering comment was posted by another agent. Before replying, decide whether a reply is warranted at all. If that comment was an acknowledgment, thanks, or sign-off and no concrete question or task is being asked of you, do NOT reply — silence is the preferred way to end agent-to-agent threads. If you do reply, do not @mention the other agent as a sign-off (that re-triggers them and starts a loop).\n\n")
 		}
 	}
-	fmt.Fprintf(&b, "Start by running `multica issue get %s --output json` to understand your task, then decide how to proceed.\n\n", task.IssueID)
-	b.WriteString(execenv.BuildCommentReplyInstructions(task.IssueID, task.TriggerCommentID))
+	if requireMulticaCLI {
+		fmt.Fprintf(&b, "Start by running `multica issue get %s --output json` to understand your task, then decide how to proceed.\n\n", task.IssueID)
+		b.WriteString(execenv.BuildCommentReplyInstructions(task.IssueID, task.TriggerCommentID))
+	} else {
+		b.WriteString("Use the provided comment context to decide and execute the requested work. ")
+		b.WriteString("Do not assume that the `multica` CLI is available in this runtime. ")
+		b.WriteString("Your final assistant output is captured by the platform as the task result.\n")
+	}
 	return b.String()
 }
 
 // buildChatPrompt constructs a prompt for interactive chat tasks.
-func buildChatPrompt(task Task) string {
+func buildChatPrompt(task Task, requireMulticaCLI bool) string {
 	var b strings.Builder
 	b.WriteString("You are running as a chat assistant for a Multica workspace.\n")
 	b.WriteString("A user is chatting with you directly. Respond to their message.\n\n")
+	if !requireMulticaCLI {
+		b.WriteString("Do not assume the `multica` CLI is available in this runtime.\n\n")
+	}
 	fmt.Fprintf(&b, "User message:\n%s\n", task.ChatMessage)
 	return b.String()
 }
 
 // buildAutopilotPrompt constructs a prompt for run_only autopilot tasks.
-func buildAutopilotPrompt(task Task) string {
+func buildAutopilotPrompt(task Task, requireMulticaCLI bool) string {
 	var b strings.Builder
 	b.WriteString("You are running as a local coding agent for a Multica workspace.\n\n")
 	b.WriteString("This task was triggered by an Autopilot in run-only mode. There is no assigned Multica issue for this run.\n\n")
@@ -93,11 +113,15 @@ func buildAutopilotPrompt(task Task) string {
 	} else {
 		b.WriteString("No additional autopilot instructions were provided. Inspect the autopilot configuration before proceeding.\n\n")
 	}
-	if task.AutopilotID != "" {
+	if task.AutopilotID != "" && requireMulticaCLI {
 		fmt.Fprintf(&b, "Start by running `multica autopilot get %s --output json` if you need the full autopilot configuration, then complete the instructions above.\n", task.AutopilotID)
 	} else {
 		b.WriteString("Complete the instructions above.\n")
 	}
-	b.WriteString("Do not run `multica issue get`; this run does not have an issue ID.\n")
+	if requireMulticaCLI {
+		b.WriteString("Do not run `multica issue get`; this run does not have an issue ID.\n")
+	} else {
+		b.WriteString("Do not assume the `multica` CLI is available in this runtime.\n")
+	}
 	return b.String()
 }

@@ -90,6 +90,8 @@ func (b *hermesBackend) Execute(ctx context.Context, prompt string, opts ExecOpt
 
 	var outputMu sync.Mutex
 	var output strings.Builder
+	var lastToolOutputMu sync.Mutex
+	var lastToolOutput string
 
 	promptDone := make(chan hermesPromptResult, 1)
 
@@ -103,6 +105,13 @@ func (b *hermesBackend) Execute(ctx context.Context, prompt string, opts ExecOpt
 				outputMu.Lock()
 				output.WriteString(msg.Content)
 				outputMu.Unlock()
+			} else if msg.Type == MessageToolResult {
+				trimmed := strings.TrimSpace(msg.Output)
+				if trimmed != "" {
+					lastToolOutputMu.Lock()
+					lastToolOutput = trimmed
+					lastToolOutputMu.Unlock()
+				}
 			}
 			trySend(msgCh, msg)
 		},
@@ -284,6 +293,14 @@ func (b *hermesBackend) Execute(ctx context.Context, prompt string, opts ExecOpt
 		outputMu.Lock()
 		finalOutput := output.String()
 		outputMu.Unlock()
+		if strings.TrimSpace(finalOutput) == "" && finalStatus == "completed" {
+			lastToolOutputMu.Lock()
+			fallbackOutput := lastToolOutput
+			lastToolOutputMu.Unlock()
+			if fallbackOutput != "" {
+				finalOutput = fallbackOutput
+			}
+		}
 
 		// If hermes produced no visible output but we sniffed a
 		// provider-level error on stderr (typically HTTP 4xx from
