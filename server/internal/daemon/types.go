@@ -29,6 +29,8 @@ type Task struct {
 	AgentID                 string          `json:"agent_id"`
 	RuntimeID               string          `json:"runtime_id"`
 	IssueID                 string          `json:"issue_id"`
+	IssueTitle              string          `json:"issue_title,omitempty"`             // issue title snapshot resolved at claim time
+	IssueDescription        string          `json:"issue_description,omitempty"`       // issue description snapshot resolved at claim time
 	WorkspaceID             string          `json:"workspace_id"`
 	Agent                   *AgentData      `json:"agent,omitempty"`
 	Repos                   []RepoData      `json:"repos,omitempty"`

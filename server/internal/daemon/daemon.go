@@ -1039,7 +1039,10 @@ func (d *Daemon) runTask(ctx context.Context, task Task, provider string, taskLo
 	requireMulticaCLI := d.cfg.RequireMulticaCLI
 	taskCtx := execenv.TaskContextForEnv{
 		IssueID:                 task.IssueID,
+		IssueTitle:              task.IssueTitle,
+		IssueDescription:        task.IssueDescription,
 		TriggerCommentID:        task.TriggerCommentID,
+		TriggerCommentContent:   task.TriggerCommentContent,
 		RequireMulticaCLI:       &requireMulticaCLI,
 		AgentID:                 agentID,
 		AgentName:               agentName,

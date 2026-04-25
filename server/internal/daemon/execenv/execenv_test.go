@@ -599,6 +599,78 @@ func TestWriteContextFilesIncludesExecutionEnvironmentHints(t *testing.T) {
 	}
 }
 
+func TestWriteContextFilesCodingOnlyIncludesIssueSnapshot(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+
+	requireCLI := false
+	ctx := TaskContextForEnv{
+		IssueID:               "issue-ctx-1",
+		IssueTitle:            "Improve no-CLI bootstrap",
+		IssueDescription:      "Pass issue title/description directly in claim payload.",
+		TriggerCommentID:      "comment-42",
+		TriggerCommentContent: "Can you proceed without multica CLI?",
+		RequireMulticaCLI:     &requireCLI,
+	}
+
+	if err := writeContextFiles(dir, "", ctx); err != nil {
+		t.Fatalf("writeContextFiles failed: %v", err)
+	}
+
+	content, err := os.ReadFile(filepath.Join(dir, ".agent_context", "issue_context.md"))
+	if err != nil {
+		t.Fatalf("failed to read issue_context.md: %v", err)
+	}
+	s := string(content)
+	for _, want := range []string{
+		"## Issue Context Snapshot",
+		"Improve no-CLI bootstrap",
+		"Pass issue title/description directly in claim payload.",
+		"Triggering Comment (`comment-42`)",
+		"Can you proceed without multica CLI?",
+	} {
+		if !strings.Contains(s, want) {
+			t.Errorf("issue_context.md missing %q\n---\n%s", want, s)
+		}
+	}
+}
+
+func TestInjectRuntimeConfigCodingOnlyIncludesIssueSnapshot(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+
+	requireCLI := false
+	ctx := TaskContextForEnv{
+		IssueID:               "issue-runtime-1",
+		IssueTitle:            "Snapshot in runtime config",
+		IssueDescription:      "Expose title/description in AGENTS/CLAUDE context.",
+		TriggerCommentID:      "comment-99",
+		TriggerCommentContent: "Please confirm no-CLI startup path.",
+		RequireMulticaCLI:     &requireCLI,
+	}
+
+	if err := InjectRuntimeConfig(dir, "claude", ctx); err != nil {
+		t.Fatalf("InjectRuntimeConfig failed: %v", err)
+	}
+
+	content, err := os.ReadFile(filepath.Join(dir, "CLAUDE.md"))
+	if err != nil {
+		t.Fatalf("failed to read CLAUDE.md: %v", err)
+	}
+	s := string(content)
+	for _, want := range []string{
+		"## Issue Context Snapshot",
+		"Snapshot in runtime config",
+		"Expose title/description in AGENTS/CLAUDE context.",
+		"Triggering comment (`comment-99`)",
+		"Please confirm no-CLI startup path.",
+	} {
+		if !strings.Contains(s, want) {
+			t.Errorf("CLAUDE.md missing %q\n---\n%s", want, s)
+		}
+	}
+}
+
 func TestWriteContextFilesCopilotNativeSkills(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()

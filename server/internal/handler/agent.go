@@ -118,6 +118,8 @@ type AgentTaskResponse struct {
 	AgentID                 string          `json:"agent_id"`
 	RuntimeID               string          `json:"runtime_id"`
 	IssueID                 string          `json:"issue_id"`
+	IssueTitle              string          `json:"issue_title,omitempty"`
+	IssueDescription        string          `json:"issue_description,omitempty"`
 	WorkspaceID             string          `json:"workspace_id"`
 	Status                  string          `json:"status"`
 	Priority                int32           `json:"priority"`

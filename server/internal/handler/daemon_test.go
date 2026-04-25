@@ -1347,6 +1347,89 @@ func TestClaimTask_AutopilotRunOnly_PopulatesWorkspaceID(t *testing.T) {
 	}
 }
 
+func TestClaimTaskByRuntime_IncludesIssueContextSnapshot(t *testing.T) {
+	if testHandler == nil {
+		t.Skip("database not available")
+	}
+
+	ctx := context.Background()
+
+	var agentID, runtimeID string
+	if err := testPool.QueryRow(ctx, `
+		SELECT a.id, a.runtime_id FROM agent a WHERE a.workspace_id = $1 LIMIT 1
+	`, testWorkspaceID).Scan(&agentID, &runtimeID); err != nil {
+		t.Fatalf("setup: get agent: %v", err)
+	}
+
+	const issueTitle = "Snapshot payload fixture"
+	const issueDescription = "Claim response should include title + description + trigger comment content."
+
+	var issueID string
+	if err := testPool.QueryRow(ctx, `
+		INSERT INTO issue (workspace_id, title, description, status, priority, creator_id, creator_type, number, position)
+		VALUES ($1, $2, $3, 'todo', 'medium', $4, 'member', 81250, 0)
+		RETURNING id
+	`, testWorkspaceID, issueTitle, issueDescription, testUserID).Scan(&issueID); err != nil {
+		t.Fatalf("setup: create issue: %v", err)
+	}
+	t.Cleanup(func() { testPool.Exec(ctx, `DELETE FROM issue WHERE id = $1`, issueID) })
+
+	const triggerContent = "Please handle this in no-CLI mode."
+	var triggerCommentID string
+	if err := testPool.QueryRow(ctx, `
+		INSERT INTO comment (issue_id, workspace_id, author_type, author_id, content, type)
+		VALUES ($1, $2, 'member', $3, $4, 'comment')
+		RETURNING id
+	`, issueID, testWorkspaceID, testUserID, triggerContent).Scan(&triggerCommentID); err != nil {
+		t.Fatalf("setup: create trigger comment: %v", err)
+	}
+
+	var taskID string
+	if err := testPool.QueryRow(ctx, `
+		INSERT INTO agent_task_queue (agent_id, runtime_id, issue_id, trigger_comment_id, status, priority)
+		VALUES ($1, $2, $3, $4, 'queued', 0)
+		RETURNING id
+	`, agentID, runtimeID, issueID, triggerCommentID).Scan(&taskID); err != nil {
+		t.Fatalf("setup: create task: %v", err)
+	}
+	t.Cleanup(func() { testPool.Exec(ctx, `DELETE FROM agent_task_queue WHERE id = $1`, taskID) })
+
+	w := httptest.NewRecorder()
+	req := newDaemonTokenRequest("POST", "/api/daemon/runtimes/"+runtimeID+"/claim", nil,
+		testWorkspaceID, "test-daemon-snapshot")
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("runtimeId", runtimeID)
+	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
+
+	testHandler.ClaimTaskByRuntime(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("ClaimTaskByRuntime: expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var resp struct {
+		Task *struct {
+			IssueTitle            string `json:"issue_title"`
+			IssueDescription      string `json:"issue_description"`
+			TriggerCommentContent string `json:"trigger_comment_content"`
+		} `json:"task"`
+	}
+	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if resp.Task == nil {
+		t.Fatal("expected a task in response, got nil")
+	}
+	if resp.Task.IssueTitle != issueTitle {
+		t.Fatalf("expected issue_title %q, got %q", issueTitle, resp.Task.IssueTitle)
+	}
+	if resp.Task.IssueDescription != issueDescription {
+		t.Fatalf("expected issue_description %q, got %q", issueDescription, resp.Task.IssueDescription)
+	}
+	if resp.Task.TriggerCommentContent != triggerContent {
+		t.Fatalf("expected trigger_comment_content %q, got %q", triggerContent, resp.Task.TriggerCommentContent)
+	}
+}
+
 // TestClaimTaskByRuntime_TaskWorkspaceMismatch_CancelsAndRejects verifies
 // the defense-in-depth check in ClaimTaskByRuntime: if a task is somehow
 // dispatched to a runtime whose workspace doesn't match the task's

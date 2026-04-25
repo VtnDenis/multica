@@ -32,7 +32,10 @@ type PrepareParams struct {
 // TaskContextForEnv is the subset of task context used for writing context files.
 type TaskContextForEnv struct {
 	IssueID                 string
+	IssueTitle              string
+	IssueDescription        string
 	TriggerCommentID        string // comment that triggered this task (empty for on_assign)
+	TriggerCommentContent   string
 	RequireMulticaCLI       *bool  // nil => true (backward-compatible default)
 	AgentID                 string // unique ID of the dispatched agent
 	AgentName               string

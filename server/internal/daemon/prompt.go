@@ -7,6 +7,23 @@ import (
 	"github.com/multica-ai/multica/server/internal/daemon/execenv"
 )
 
+func appendIssueSnapshotForNoCLI(b *strings.Builder, task Task) {
+	title := strings.TrimSpace(task.IssueTitle)
+	description := strings.TrimSpace(task.IssueDescription)
+	if title == "" && description == "" {
+		return
+	}
+	b.WriteString("\nIssue context snapshot (provided by platform):\n")
+	if title != "" {
+		fmt.Fprintf(b, "- Title: %s\n", title)
+	}
+	if description != "" {
+		b.WriteString("- Description:\n")
+		fmt.Fprintf(b, "%s\n", description)
+	}
+	b.WriteString("\n")
+}
+
 // BuildPrompt constructs the task prompt for an agent CLI.
 // Keep this minimal — detailed instructions live in CLAUDE.md / AGENTS.md
 // injected by execenv.InjectRuntimeConfig.
@@ -34,6 +51,7 @@ func BuildPromptWithOptions(task Task, requireMulticaCLI bool) string {
 	} else {
 		b.WriteString("Start from the task context already provided in this run and complete the implementation directly. ")
 		b.WriteString("Do NOT run `multica` commands in this runtime.\n")
+		appendIssueSnapshotForNoCLI(&b, task)
 	}
 	return b.String()
 }
@@ -70,6 +88,7 @@ func buildCommentPrompt(task Task, requireMulticaCLI bool) string {
 		b.WriteString("Use the provided comment context to decide and execute the requested work. ")
 		b.WriteString("Do NOT run `multica` commands in this runtime. ")
 		b.WriteString("Your final assistant output is captured by the platform as the task result.\n")
+		appendIssueSnapshotForNoCLI(&b, task)
 	}
 	return b.String()
 }

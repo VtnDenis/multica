@@ -115,6 +115,26 @@ func TestBuildPromptWithOptions_CodingOnlyMode(t *testing.T) {
 	}
 }
 
+func TestBuildPromptWithOptions_CodingOnlyModeIncludesIssueSnapshot(t *testing.T) {
+	t.Parallel()
+
+	prompt := BuildPromptWithOptions(Task{
+		IssueID:          "issue-1",
+		IssueTitle:       "Fix runtime startup",
+		IssueDescription: "Inject context snapshot into task payload.",
+	}, false)
+
+	for _, want := range []string{
+		"Issue context snapshot (provided by platform)",
+		"Title: Fix runtime startup",
+		"Inject context snapshot into task payload.",
+	} {
+		if !strings.Contains(prompt, want) {
+			t.Fatalf("expected coding-only prompt to contain %q\n---\n%s", want, prompt)
+		}
+	}
+}
+
 func TestBuildPromptWithOptions_CommentCodingOnlyMode(t *testing.T) {
 	t.Parallel()
 

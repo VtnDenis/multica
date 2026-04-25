@@ -140,6 +140,28 @@ func buildMetaSkillContent(provider string, ctx TaskContextForEnv) string {
 
 	b.WriteString("### Workflow\n\n")
 
+	if !requireMulticaCLI {
+		title := strings.TrimSpace(ctx.IssueTitle)
+		description := strings.TrimSpace(ctx.IssueDescription)
+		triggerComment := strings.TrimSpace(ctx.TriggerCommentContent)
+		if title != "" || description != "" || (ctx.TriggerCommentID != "" && triggerComment != "") {
+			b.WriteString("## Issue Context Snapshot\n\n")
+			if title != "" {
+				fmt.Fprintf(&b, "- Title: %s\n", title)
+			}
+			if description != "" {
+				b.WriteString("- Description:\n\n")
+				b.WriteString(description)
+				b.WriteString("\n\n")
+			}
+			if ctx.TriggerCommentID != "" && triggerComment != "" {
+				fmt.Fprintf(&b, "- Triggering comment (`%s`):\n\n", ctx.TriggerCommentID)
+				b.WriteString(triggerComment)
+				b.WriteString("\n\n")
+			}
+		}
+	}
+
 	if ctx.ChatSessionID != "" {
 		// Chat task: interactive assistant mode
 		b.WriteString("**You are in chat mode.** A user is messaging you directly in a chat window.\n\n")

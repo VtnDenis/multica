@@ -154,6 +154,25 @@ func renderIssueContext(provider string, ctx TaskContextForEnv) string {
 	} else {
 		b.WriteString("Start from the context already provided in this run and implement the requested changes directly.\n")
 		b.WriteString("Do NOT run `multica` commands in this runtime.\n\n")
+		title := strings.TrimSpace(ctx.IssueTitle)
+		description := strings.TrimSpace(ctx.IssueDescription)
+		triggerComment := strings.TrimSpace(ctx.TriggerCommentContent)
+		if title != "" || description != "" || triggerComment != "" {
+			b.WriteString("## Issue Context Snapshot\n\n")
+			if title != "" {
+				fmt.Fprintf(&b, "- **Title:** %s\n", title)
+			}
+			if description != "" {
+				b.WriteString("- **Description:**\n\n")
+				b.WriteString(description)
+				b.WriteString("\n\n")
+			}
+			if ctx.TriggerCommentID != "" && triggerComment != "" {
+				fmt.Fprintf(&b, "- **Triggering Comment (`%s`):**\n\n", ctx.TriggerCommentID)
+				b.WriteString(triggerComment)
+				b.WriteString("\n\n")
+			}
+		}
 	}
 
 	if ctx.ExecutionContainerName != "" || ctx.ExecutionProxyPort != "" {
