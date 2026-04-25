@@ -246,6 +246,11 @@ func buildDaemonStartArgs(cmd *cobra.Command) []string {
 	if n, _ := cmd.Flags().GetInt("max-concurrent-tasks"); n > 0 {
 		args = append(args, "--max-concurrent-tasks", strconv.Itoa(n))
 	}
+	if agents, _ := cmd.Flags().GetStringSlice("agent"); len(agents) > 0 {
+		for _, a := range agents {
+			args = append(args, "--agent", a)
+		}
+	}
 
 	// Forward global persistent flags.
 	if v, _ := cmd.Flags().GetString("server-url"); v != "" {
@@ -286,6 +291,9 @@ func runDaemonForeground(cmd *cobra.Command) error {
 	}
 	if n, _ := cmd.Flags().GetInt("max-concurrent-tasks"); n > 0 {
 		overrides.MaxConcurrentTasks = n
+	}
+	if agents, _ := cmd.Flags().GetStringSlice("agent"); len(agents) > 0 {
+		overrides.OnlyAgents = agents
 	}
 
 	cfg, err := daemon.LoadConfig(overrides)
