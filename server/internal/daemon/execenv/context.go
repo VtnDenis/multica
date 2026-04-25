@@ -153,7 +153,7 @@ func renderIssueContext(provider string, ctx TaskContextForEnv) string {
 		fmt.Fprintf(&b, "Run `multica issue get %s --output json` to fetch the full issue details.\n\n", ctx.IssueID)
 	} else {
 		b.WriteString("Start from the context already provided in this run and implement the requested changes directly.\n")
-		b.WriteString("Do NOT run `multica` commands in this runtime.\n\n")
+		b.WriteString("Do NOT run `multica` commands in this runtime. Any `multica` command is invalid in this run.\n\n")
 		title := strings.TrimSpace(ctx.IssueTitle)
 		description := strings.TrimSpace(ctx.IssueDescription)
 		triggerComment := strings.TrimSpace(ctx.TriggerCommentContent)
@@ -220,7 +220,7 @@ func renderAutopilotContext(ctx TaskContextForEnv) string {
 	if ctx.RequiresMulticaCLI() {
 		b.WriteString("This is a run-only autopilot task with no assigned issue. Do not run `multica issue get` unless the autopilot instructions explicitly ask you to create or update an issue.\n\n")
 	} else {
-		b.WriteString("This is a run-only autopilot task with no assigned issue. Complete the instructions directly and do NOT run `multica` commands in this runtime.\n\n")
+		b.WriteString("This is a run-only autopilot task with no assigned issue. Complete the instructions directly and do NOT run `multica` commands in this runtime. Any `multica` command is invalid in this run.\n\n")
 	}
 	if ctx.AutopilotID != "" && ctx.RequiresMulticaCLI() {
 		fmt.Fprintf(&b, "Run `multica autopilot get %s --output json` if you need the full autopilot configuration.\n\n", ctx.AutopilotID)

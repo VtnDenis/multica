@@ -102,7 +102,7 @@ func buildMetaSkillContent(provider string, ctx TaskContextForEnv) string {
 		b.WriteString("- `multica autopilot delete <id>` — Delete an autopilot\n\n")
 	} else {
 		b.WriteString("## Platform Access\n\n")
-		b.WriteString("`multica` CLI access is disabled for this runtime. Do NOT run `multica` commands.\n\n")
+		b.WriteString("`multica` CLI access is disabled for this runtime. Do NOT run `multica` commands. Any `multica` command is invalid in this run.\n\n")
 	}
 
 	// Inject available repositories section.
@@ -173,7 +173,7 @@ func buildMetaSkillContent(provider string, ctx TaskContextForEnv) string {
 			b.WriteString("- If asked to perform actions (create issues, update status, etc.), use the appropriate CLI commands\n")
 			b.WriteString("- If the task requires code changes, use `multica repo checkout <url>` to get the code first\n")
 		} else {
-			b.WriteString("- Do NOT run `multica` commands in this runtime\n")
+			b.WriteString("- Do NOT run `multica` commands in this runtime (any `multica` command is invalid in this run)\n")
 			b.WriteString("- Use the message context and repository files already available in the working directory\n")
 		}
 		b.WriteString("- Keep responses concise and direct\n\n")
@@ -206,7 +206,7 @@ func buildMetaSkillContent(provider string, ctx TaskContextForEnv) string {
 		if requireMulticaCLI {
 			b.WriteString("- Do not run `multica issue get`, `multica issue comment add`, or `multica issue status` for this run unless the autopilot instructions explicitly tell you to create or update an issue\n\n")
 		} else {
-			b.WriteString("- Do NOT run `multica` commands for this run\n\n")
+			b.WriteString("- Do NOT run `multica` commands for this run (any `multica` command is invalid in this run)\n\n")
 		}
 	} else if ctx.TriggerCommentID != "" {
 		// Comment-triggered: focus on reading and replying
@@ -225,7 +225,7 @@ func buildMetaSkillContent(provider string, ctx TaskContextForEnv) string {
 			fmt.Fprintf(&b, "1. Use the provided context to find and address the triggering comment (ID: `%s`)\n", ctx.TriggerCommentID)
 			b.WriteString("2. **Decide whether a reply is warranted.** If the triggering comment is an acknowledgment / thanks / sign-off from another agent and no concrete question or task is being asked of you, do NOT post a reply — just exit. Silence is a valid and preferred way to end agent-to-agent conversations.\n")
 			b.WriteString("3. If a reply IS warranted: do any requested work first, then decide whether to include any `@mention` link. The default is NO mention.\n")
-			b.WriteString("4. Do NOT run `multica` commands in this runtime. Your final assistant output is captured as the task result.\n")
+			b.WriteString("4. Do NOT run `multica` commands in this runtime. Any `multica` command is invalid in this run. Your final assistant output is captured as the task result.\n")
 			b.WriteString("5. Do NOT change issue status from this runtime unless explicitly asked and the required tools are available\n\n")
 		}
 	} else {
@@ -242,7 +242,7 @@ func buildMetaSkillContent(provider string, ctx TaskContextForEnv) string {
 		} else {
 			b.WriteString("Follow your Skills and Agent Identity to complete the task directly (write code, investigate, etc.).\n\n")
 			b.WriteString("1. Use the task context already provided in this run\n")
-			b.WriteString("2. Do NOT run `multica` commands in this runtime\n")
+			b.WriteString("2. Do NOT run `multica` commands in this runtime (any `multica` command is invalid in this run)\n")
 			b.WriteString("3. Provide a concise final result in your assistant output when done\n")
 			b.WriteString("4. If blocked, clearly state what is missing (tooling, permissions, context)\n\n")
 		}
@@ -310,7 +310,8 @@ func buildMetaSkillContent(provider string, ctx TaskContextForEnv) string {
 		b.WriteString("## Runtime Constraints\n\n")
 		b.WriteString("This runtime may not provide the `multica` CLI or direct access to Multica APIs. ")
 		b.WriteString("Complete coding tasks without assuming platform-management tools are present. ")
-		b.WriteString("Do not rely on direct HTTP calls to Multica internals from this sandbox.\n\n")
+		b.WriteString("Do not rely on direct HTTP calls to Multica internals from this sandbox. ")
+		b.WriteString("Treat any `multica` command invocation as invalid for this run.\n\n")
 	}
 
 	b.WriteString("## Output\n\n")
@@ -324,7 +325,7 @@ func buildMetaSkillContent(provider string, ctx TaskContextForEnv) string {
 		b.WriteString("When referencing an issue in a comment, use the issue mention format `[MUL-123](mention://issue/<issue-id>)` so it renders as a clickable link. (Issue mentions have no side effect; only member/agent mentions do — see the Mentions section above.)\n")
 	} else {
 		b.WriteString("Your final assistant output is captured automatically as the task result. Keep it concise and outcome-focused.\n")
-		b.WriteString("This is a hermetic no-CLI run: do not perform issue-management actions via `multica` commands.\n")
+		b.WriteString("This is a hermetic no-CLI run: do not perform issue-management actions via `multica` commands. Any `multica` command is invalid in this run.\n")
 	}
 
 	return b.String()

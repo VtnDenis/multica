@@ -110,6 +110,9 @@ func TestBuildPromptWithOptions_CodingOnlyMode(t *testing.T) {
 	if !strings.Contains(prompt, "Do NOT run `multica` commands") {
 		t.Fatalf("expected strict no-CLI guidance, got:\n%s", prompt)
 	}
+	if !strings.Contains(prompt, "Any `multica` command is invalid in this run") {
+		t.Fatalf("expected fail-fast no-CLI wording, got:\n%s", prompt)
+	}
 	if strings.Contains(prompt, "Start by running `multica issue get") {
 		t.Fatalf("coding-only prompt should not enforce CLI first step:\n%s", prompt)
 	}
@@ -149,6 +152,9 @@ func TestBuildPromptWithOptions_CommentCodingOnlyMode(t *testing.T) {
 
 	if !strings.Contains(prompt, "Do NOT run `multica` commands") {
 		t.Fatalf("expected no-CLI warning in comment mode, got:\n%s", prompt)
+	}
+	if !strings.Contains(prompt, "Any `multica` command is invalid in this run") {
+		t.Fatalf("expected fail-fast no-CLI wording in comment mode, got:\n%s", prompt)
 	}
 	if strings.Contains(prompt, "multica issue comment add issue-1 --parent comment-1") {
 		t.Fatalf("coding-only comment prompt should not enforce multica comment command:\n%s", prompt)

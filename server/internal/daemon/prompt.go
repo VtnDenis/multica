@@ -50,7 +50,7 @@ func BuildPromptWithOptions(task Task, requireMulticaCLI bool) string {
 		fmt.Fprintf(&b, "Start by running `multica issue get %s --output json` to understand your task, then complete it.\n", task.IssueID)
 	} else {
 		b.WriteString("Start from the task context already provided in this run and complete the implementation directly. ")
-		b.WriteString("Do NOT run `multica` commands in this runtime.\n")
+		b.WriteString("Do NOT run `multica` commands in this runtime. Any `multica` command is invalid in this run.\n")
 		appendIssueSnapshotForNoCLI(&b, task)
 	}
 	return b.String()
@@ -86,7 +86,7 @@ func buildCommentPrompt(task Task, requireMulticaCLI bool) string {
 		b.WriteString(execenv.BuildCommentReplyInstructions(task.IssueID, task.TriggerCommentID))
 	} else {
 		b.WriteString("Use the provided comment context to decide and execute the requested work. ")
-		b.WriteString("Do NOT run `multica` commands in this runtime. ")
+		b.WriteString("Do NOT run `multica` commands in this runtime. Any `multica` command is invalid in this run. ")
 		b.WriteString("Your final assistant output is captured by the platform as the task result.\n")
 		appendIssueSnapshotForNoCLI(&b, task)
 	}
@@ -99,7 +99,7 @@ func buildChatPrompt(task Task, requireMulticaCLI bool) string {
 	b.WriteString("You are running as a chat assistant for a Multica workspace.\n")
 	b.WriteString("A user is chatting with you directly. Respond to their message.\n\n")
 	if !requireMulticaCLI {
-		b.WriteString("Do NOT run `multica` commands in this runtime.\n\n")
+		b.WriteString("Do NOT run `multica` commands in this runtime. Any `multica` command is invalid in this run.\n\n")
 	}
 	fmt.Fprintf(&b, "User message:\n%s\n", task.ChatMessage)
 	return b.String()
@@ -140,7 +140,7 @@ func buildAutopilotPrompt(task Task, requireMulticaCLI bool) string {
 	if requireMulticaCLI {
 		b.WriteString("Do not run `multica issue get`; this run does not have an issue ID.\n")
 	} else {
-		b.WriteString("Do NOT run `multica` commands in this runtime.\n")
+		b.WriteString("Do NOT run `multica` commands in this runtime. Any `multica` command is invalid in this run.\n")
 	}
 	return b.String()
 }

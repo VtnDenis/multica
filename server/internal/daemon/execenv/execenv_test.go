@@ -583,6 +583,7 @@ func TestInjectRuntimeConfigCodingOnlyMode(t *testing.T) {
 	s := string(content)
 	for _, want := range []string{
 		"Do NOT run `multica` commands",
+		"Any `multica` command is invalid in this run",
 		"Runtime Constraints",
 		"final assistant output is captured automatically",
 	} {
@@ -672,6 +673,7 @@ func TestWriteContextFilesCodingOnlyIncludesIssueSnapshot(t *testing.T) {
 		"Pass issue title/description directly in claim payload.",
 		"Triggering Comment (`comment-42`)",
 		"Can you proceed without multica CLI?",
+		"Any `multica` command is invalid in this run",
 	} {
 		if !strings.Contains(s, want) {
 			t.Errorf("issue_context.md missing %q\n---\n%s", want, s)
