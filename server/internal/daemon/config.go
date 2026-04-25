@@ -65,6 +65,7 @@ type Overrides struct {
 	RuntimeName        string
 	Profile            string // profile name (empty = default)
 	HealthPort         int    // health check port (0 = use default)
+	OnlyAgents         []string // if non-empty, only these agents are detected
 }
 
 // LoadConfig builds the daemon configuration from environment variables
@@ -151,6 +152,15 @@ func LoadConfig(overrides Overrides) (Config, error) {
 			Path:  kimiPath,
 			Model: strings.TrimSpace(os.Getenv("MULTICA_KIMI_MODEL")),
 		}
+	}
+	if len(overrides.OnlyAgents) > 0 {
+		filtered := map[string]AgentEntry{}
+		for _, name := range overrides.OnlyAgents {
+			if entry, ok := agents[name]; ok {
+				filtered[name] = entry
+			}
+		}
+		agents = filtered
 	}
 	if len(agents) == 0 {
 		return Config{}, fmt.Errorf("no agent CLI found: install claude, codex, copilot, opencode, openclaw, hermes, gemini, pi, cursor-agent, or kimi and ensure it is on PATH")
